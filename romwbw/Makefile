@@ -1,6 +1,6 @@
 UPSTREAM ?= ..
 SJASM ?= tools/sjasmplus
-EMU ?= ../romwbw_emu/src/romwbw_emu
+EMU ?= ../../romwbw_emu/src/romwbw_emu
 PORT_SRC = $(wildcard port/*.asm port/*.inc $(UPSTREAM)/src/*.asm $(UPSTREAM)/src/*.inc)
 
 all: build/xcpm-rc2014.rom build/xcpm-emu.rom build/xcpm.img
@@ -58,7 +58,10 @@ run: all
 test: all
 	python3 tools/test_emu.py
 
+software:
+	tools/deploy_software.sh
+
 clean:
 	rm -rf build $(UPSTREAM)/build
 
-.PHONY: all run test clean
+.PHONY: all run test software clean
