@@ -168,7 +168,11 @@ dc_n2:	inc	hl			; and its routine
 dc_ext:	call	tryprog			; returns only if there is none
 dc_sub:	call	runsub			; NAME.SUB?
 	jp	nc,shell
-dc_what: ld	hl,cmdfcb+1		; as CP/M: "NAME?"
+dc_what:
+	ifdef	ROMWBW
+	call	crlf
+	endif
+	ld	hl,cmdfcb+1		; as CP/M: "NAME?"
 	call	pname
 	ld	a,'?'
 	call	kputc
