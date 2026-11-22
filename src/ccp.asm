@@ -1082,27 +1082,96 @@ cver:	call	crlf
 	jp	shell
 
 ; HELP
-; HELP topic: CP/M 3's HELP.COM, if there is one
+; HELP topic: CP/M 3's HELP.COM, if there is one, else the matching entry
 chelp:	call	skipsp
 	or	a
-	jr	z,ch_1
+	jr	z,ch_all
+	push	hl
 	call	tryprog
-ch_1:	call	pcmsgsh
-	db	"DIR, LS [d:][name]",09h,"list files",0Dh,0Ah
-	db	"TYPE, CAT name",09h,09h,"show a text file",0Dh,0Ah
-	db	"ERA, RM, DEL name",09h,"delete",0Dh,0Ah
-	db	"REN new=old",09h,09h,"rename",0Dh,0Ah
-	db	"MV old new",09h,09h,"rename, or move",0Dh,0Ah
-	db	"CP, COPY from to",09h,"copy, byte exact",0Dh,0Ah
-	db	"SAVE n name",09h,09h,"save n pages from 0100h",0Dh,0Ah
-	db	"USER n, FREE [d:], CLS, VER",0Dh,0Ah
-	db	"d:",09h,09h,09h,"change drive",0Dh,0Ah
-	db	"CD [path], PWD",09h,09h,"change or show the folder",0Dh,0Ah
-	db	"MD, MKDIR path",09h,09h,"make a folder",0Dh,0Ah
-	db	"RD, RMDIR path",09h,09h,"remove an empty folder",0Dh,0Ah
-	db	"NAME",09h,09h,09h,"run NAME.COM, NAME.SUB or NAME.BAT",0Dh,0Ah
-	db	"SUBMIT name",09h,09h,"run NAME.SUB, $1 to $9 from the line",0Dh,0Ah
-	db	"HELP topic",09h,09h,"CP/M 3's HELP.COM",0
+	pop	de
+	ld	hl,chtab
+ch_find:ld	a,(hl)
+	or	a
+	jr	z,ch_none
+	push	hl
+	call	hlp_line
+	or	a
+	jr	nz,ch_got
+	pop	bc
+	jr	ch_find
+ch_got:	pop	hl
+	call	crlf
+	call	pstr
+	jp	shell
+ch_none:call	pcmsgsh
+	db	"No help for that topic",0
+ch_all:	ld	hl,chtab
+ch_next:ld	a,(hl)
+	or	a
+	jp	z,shell
+	call	crlf
+	call	pstr
+	jr	ch_next
+
+; A line's aliases start it or follow a comma. DE is the topic, HL the
+; line. Return HL past its NUL and A nonzero when the topic names an alias.
+hlp_line:
+	ld	b,0
+hl_alias:push	hl
+	push	de
+hl_cmp:	ld	a,(de)
+	or	a
+	jr	z,hl_tail
+	cp	' '
+	jr	z,hl_tail
+	cp	(hl)
+	jr	nz,hl_no
+	inc	de
+	inc	hl
+	jr	hl_cmp
+hl_tail:ld	a,(hl)
+	cp	','
+	jr	z,hl_yes
+	cp	' '
+	jr	z,hl_yes
+	cp	09h
+	jr	nz,hl_no
+hl_yes:ld	b,1
+hl_no:	pop	de
+	pop	hl
+hl_scan:ld	a,(hl)
+	or	a
+	jr	z,hl_end
+	cp	','
+	jr	z,hl_comma
+	inc	hl
+	jr	hl_scan
+hl_comma:inc	hl
+	ld	a,(hl)
+	cp	' '
+	jr	nz,hl_alias
+	inc	hl
+	jr	hl_alias
+hl_end:	inc	hl
+	ld	a,b
+	or	a
+	ret
+
+chtab:	db	"DIR, LS [d:][name]",09h,"list files",0
+	db	"TYPE, CAT name",09h,09h,"show a text file",0
+	db	"ERA, RM, DEL name",09h,"delete",0
+	db	"REN new=old",09h,09h,"rename",0
+	db	"MV old new",09h,09h,"rename, or move",0
+	db	"CP, COPY from to",09h,"copy, byte exact",0
+	db	"SAVE n name",09h,09h,"save n pages from 0100h",0
+	db	"USER n, FREE [d:], CLS, CLEAR, VER",0
+	db	"D:",09h,09h,09h,"change drive",0
+	db	"CD, CHDIR [path], PWD",09h,"change or show the folder",0
+	db	"MD, MKDIR path",09h,09h,"make a folder",0
+	db	"RD, RMDIR path",09h,09h,"remove an empty folder",0
+	db	"NAME",09h,09h,09h,"run NAME.COM, NAME.SUB or NAME.BAT",0
+	db	"SUBMIT name",09h,09h,"run NAME.SUB, $1 to $9 from the line",0
+	db	"HELP topic",09h,09h,"built-in help, or CP/M 3's HELP.COM",0,0
 
 
 ; ------------------------------------------------------------------

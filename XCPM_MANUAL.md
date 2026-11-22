@@ -195,7 +195,7 @@ on an error.
 | `VER` | show the version |
 | `SUBMIT name [args]` | run `NAME.SUB` as a batch file |
 | `CD`, `MD`, `RD`, `PWD` | folders, above |
-| `HELP [topic]` | list the built-in commands. With a topic, run CP/M 3's `HELP.COM` |
+| `HELP [topic]` | list the built-in commands, or only the entry for a command or alias. With a topic, run CP/M 3's `HELP.COM` first if it exists |
 
 A built-in command followed by `[options]`, such as `DIR [FULL]`, runs
 the `.COM` of that name instead, so CP/M 3's own DIR, ERASE and so on
