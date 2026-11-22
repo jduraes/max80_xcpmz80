@@ -347,7 +347,11 @@ lcopy:	ld	a,BANK_TPA
 
 ; Start a program: TPA mapped, a stack under the BDOS that returns to
 ; 0000h (warm boot), and jump to 0100h
-golaunch: di
+golaunch:
+	ifdef	ROMWBW
+	call	crlf
+	endif
+	di
 	ld	a,BANK_TPA
 	BANKSET
 	ld	hl,(0006h)		; under the BDOS or the lowest RSX
