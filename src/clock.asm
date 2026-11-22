@@ -4,6 +4,9 @@
 ; Registers 0-12 are seconds, minutes, hours, day of week, date, month
 ; and year, units then tens. A clock that reads nonsense gives 1 Jan 2026, 00:00.
 
+	ifdef	ROMWBW
+	include	"../../port/clock_hbios.inc"
+	else
 ; Read the clock into clk (13 digits), twice until two reads agree
 rdclk:	ld	hl,clk			; clk, then clk2 just after it
 	call	rdclk1
@@ -107,6 +110,7 @@ digits:	ld	a,(hl)
 	dec	hl
 	ret
 
+	endif
 ; FAT date in DE, time in BC, now
 fatnow:	call	clkget
 	ld	hl,(cyear)		; ((year - 1980) * 16 + month) * 32 + day

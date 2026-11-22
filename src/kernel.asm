@@ -13,11 +13,13 @@ kmain:	ld	hl,BSS			; zero the variables
 	call	ubtpa
 	call	scbinit
 	call	diskinit
+	ifndef	ROMWBW
 	ld	a,0CFh			; PIO port B: all outputs, for the clock
 	ld	(PIOCB),a
 	xor	a
 	ld	(PIOCB),a
 	ld	(PIODB),a
+	endif
 	call	psign
 	call	pmsg
 	db	", ",0
@@ -25,7 +27,11 @@ kmain:	ld	hl,BSS			; zero the variables
 	call	pdec
 	call	pmsg
 	db	"K TPA",0Dh,0Ah
+	ifdef	ROMWBW
+	db	"Terminal: Soroc IQ-120 over an ANSI terminal",0Dh,0Ah,0
+	else
 	db	"Terminal: Soroc IQ-120, TeleVideo 912/920, ADM-3A",0Dh,0Ah,0
+	endif
 	xor	a			; the boot device is A:
 	ld	(scb+SCB_DRV),a
 	ld	(shdrv),a
@@ -151,7 +157,11 @@ psign:	ld	hl,signon
 	ld	a,'K'
 	jp	kputc
 
+	ifdef	ROMWBW
+signon:	db	"XCP/M-Z80 v0.2 for RomWBW on RC2014, ",0
+	else
 signon:	db	"XCP/M-Z80 v0.2 for the Lobo MAX-80, ",0
+	endif
 
 ; The boot sector puts the boot device here: 0 floppy, 1 SASI
 BOOTDEV: db	0

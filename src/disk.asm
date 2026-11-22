@@ -82,6 +82,50 @@ drvix:	push	de
 ; the floppies and F: to H: partitions 1 to 3. A floppy's kind is
 ; found when it is first used, but for the boot floppy's.
 diskinit:
+	ifdef	ROMWBW
+	ld	hl,drvtab
+	ld	bc,NDRV*DSZ-1
+	call	zfill
+	call	bclear
+	ld	b,BF_SYSGET
+	ld	c,BF_SYSGET_DIOCNT
+	call	HB_INVOKE
+	ld	a,e
+	ld	(fdtries),a
+	xor	a
+	ld	(fdsec),a
+	ld	(fdside),a
+	ld	ix,drvtab
+di_hb:	ld	a,(fdtries)
+	or	a
+	ret	z
+	ld	a,(fdside)
+	cp	NDRV
+	ret	nc
+	ld	a,(fdsec)
+	ld	c,a
+	ld	b,BF_DIODEVICE
+	call	HB_INVOKE
+	jr	nz,di_hn
+	ld	a,d
+	cp	DIODEV_MD
+	jr	z,di_hn
+	ld	(ix+D_TYPE),DT_SASI
+	ld	a,(fdsec)
+	ld	(ix+D_UNIT),a
+	ld	de,DSZ
+	add	ix,de
+	ld	a,(fdside)
+	inc	a
+	ld	(fdside),a
+di_hn:	ld	a,(fdsec)
+	inc	a
+	ld	(fdsec),a
+	ld	a,(fdtries)
+	dec	a
+	ld	(fdtries),a
+	jr	di_hb
+	else
 	ld	hl,drvtab
 	ld	bc,NDRV*DSZ-1
 	call	zfill
@@ -124,6 +168,7 @@ di5:	ld	de,DSZ
 	inc	a
 	ld	ix,drvtab
 	jp	fdkind
+	endif
 
 dt_sasi: db	DT_SASI,0, DT_FLOPPY,1, DT_FLOPPY,2, DT_FLOPPY,4, DT_FLOPPY,8
 	db	DT_SASI,0, DT_SASI,0, DT_SASI,0
@@ -139,6 +184,10 @@ rdsec:	xor	a
 wrsec:	call	tbwr			; the track buffer must not keep it
 	ld	a,1
 rw0:	ld	(rwflag),a
+	ifdef	ROMWBW
+	jp	hbrw
+	include	"../../port/disk_hbios.inc"
+	else
 	ld	a,(ix+D_TYPE)
 	dec	a			; DT_FLOPPY
 	jr	z,fdrw
@@ -1174,6 +1223,7 @@ dv2:	sub	c
 dv3:	djnz	dv1
 	ret
 
+	endif
 ; ------------------------------------------------------------------
 ; The cache. Four 512-byte buffers, write back, least recently used
 ; first out. A header is drive (FFh empty), LBA, dirty, age, and the

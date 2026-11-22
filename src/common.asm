@@ -64,10 +64,10 @@ be_0:	cp	LIBFN			; A = C
 	ld	a,(UBANK)
 	push	af
 	call	bdioff			; before the kernel is mapped
-	ld	a,(PIODA)
+	ld	a,(HB_CURBNK)
 	ld	(UBANK),a
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	call	kbdos
 	jp	bdexit
 
@@ -83,7 +83,7 @@ libent:	call	iffget
 	inc	a
 	ld	(LIBIFF),a
 	ld	a,BANK_B2
-	ld	(PIODA),a
+	BANKSET
 	jp	0
 
 ; The rest of the page as CP/M 3's resident BDOS has it (RESBDOS3.SPR):
@@ -196,10 +196,10 @@ NXDPH	equ	4
 bdrvtbl: push	bc
 	push	de
 	push	ix
-	ld	a,(PIODA)
+	ld	a,(HB_CURBNK)
 	ld	c,a
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	ld	ix,drvtab
 	ld	hl,XDPH
 	ld	b,NXDPH
@@ -243,7 +243,7 @@ xd_4:	ld	(hl),e
 	add	ix,de
 	djnz	xd_1
 	ld	a,c
-	ld	(PIODA),a
+	BANKSET
 	pop	ix
 	pop	de
 	pop	bc
@@ -284,7 +284,7 @@ bmove:	ex	de,hl			; CP/M 3: DE = source, HL = dest
 umap:	call	iffget
 	ld	(UIFF),a
 	ld	a,(UBANK)
-	ld	(PIODA),a
+	BANKSET
 	ret
 
 ; A = the program's byte at HL
@@ -307,7 +307,7 @@ ucopy:	call	umap
 					; and on into usys
 usys:	push	af
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	ld	a,(UIFF)
 	or	a
 	jr	z,uy_1
@@ -317,7 +317,7 @@ uy_1:	pop	af
 
 ; The C library's way back and its copy, past the first page
 libout:	ld	a,BANK_TPA
-	ld	(PIODA),a
+	BANKSET
 	ld	a,(LIBIFF)
 	cp	2			; C: they were off
 	ld	a,0
@@ -337,23 +337,25 @@ if_1:	di				; after it reads 0, so look again
 ; The library's copy: BC bytes, not 0, from HL to DE with the TPA mapped
 ; low, so both ends are as the program sees them, then B2 again
 lcopy:	ld	a,BANK_TPA
-	ld	(PIODA),a
+	BANKSET
 	ldir
 	ld	a,BANK_B2
-	ld	(PIODA),a
+	BANKSET
 	ret
 
 ; Start a program: TPA mapped, a stack under the BDOS that returns to
 ; 0000h (warm boot), and jump to 0100h
 golaunch: di
 	ld	a,BANK_TPA
-	ld	(PIODA),a
+	BANKSET
 	ld	hl,(0006h)		; under the BDOS or the lowest RSX
 	ld	l,0
 	ld	sp,hl
 	ld	hl,progret		; RET goes back to the shell, as
 	push	hl			; to CP/M 2.2's CCP
+	ifndef	ROMWBW
 	ei
+	endif
 	jp	0100h
 
 ; A patched BIOS call above (LD HL,entry for JP entry) comes here, as
@@ -384,11 +386,11 @@ xc_1:	or	a			; our own: straight there
 xc_2:	push	bc			; patched: in the TPA bank
 	push	de
 	ld	a,BANK_TPA
-	ld	(PIODA),a
+	BANKSET
 	call	resredir
 	ld	b,a
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	ld	a,b
 	or	a
 	pop	de
@@ -411,11 +413,11 @@ rsxcall: ld	(shsp),sp
 	ld	(kstk),sp
 	ld	sp,RSXSTK
 	ld	a,BANK_TPA
-	ld	(PIODA),a
+	BANKSET
 	jp	RSXSTUB
 rsxret:	ld	b,a
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	ld	sp,(shsp)
 	push	hl
 	ld	hl,STKTOP
@@ -439,14 +441,18 @@ wb_1:	di
 	ld	sp,STKTOP
 	ld	(kstk),sp
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	xor	a
 	ld	(LIBIFF),a
 	ld	(BDIFF),a
+	ifdef	ROMWBW
+	di
+	else
 	ld	a,IVPAGE		; the system's tick again, whatever
 	ld	i,a			; table or mode a program left
 	im	2
 	ei
+	endif
 	jp	(hl)
 
 ; At 0000h in B2 when there is no library: HL = 0, back to the program.
@@ -654,7 +660,11 @@ devgo:	ld	l,a
 ; DRI's has not, as Lobo's INIAB does.
 bdevtbl: ld	hl,devtbl
 	ret
-bdevini: ld	a,c
+bdevini:
+	ifdef	ROMWBW
+	ret
+	else
+	ld	a,c
 	dec	a
 	cp	2
 	ret	nc
@@ -675,9 +685,17 @@ di_1:	ld	hl,BAUDA
 	ld	hl,BAUDB
 di_2:	ld	(hl),a
 	ret
+	endif
 
 ; The printer, as Lobo's: wait for not busy, then the byte. Status:
 ; A = FFh and NZ when ready, 0 and Z when busy
+	ifdef	ROMWBW
+ppost:	ld	c,0
+	jp	hbost
+ppout:	ld	a,c
+	ld	c,0
+	jp	hbunitout
+	else
 ppost:	ld	a,(PSTAT)
 	rla
 	sbc	a,a			; FFh busy
@@ -689,17 +707,66 @@ ppout:	call	ppost
 	ld	a,c
 	ld	(PDATA),a
 	ret
+	endif
 nost:	xor	a			; no input there
 	ret
 nulin:	ld	a,1Ah
 	ret
-crtost:	ld	a,0FFh
+crtost:
+	ifdef	ROMWBW
+	ld	c,CIO_CONSOLE
+	jp	hbost
+	else
+	ld	a,0FFh
 	or	a
 	ret
+	endif
 
-; The SIO, polled, as Lobo's: RR0 bit 0 a byte in, bit 2 room to send.
-; Channel B's parity bit is dropped. A has 8 data bits and keeps them,
-; where Lobo's drops bit 7 on both, so a binary file comes in whole.
+; Serial channels are HBIOS character units 0 and 1 on RomWBW.
+	ifdef	ROMWBW
+siaist:	ld	c,0
+	jr	hbist
+sibist:	ld	c,1
+hbist:	ld	b,BF_CIOIST
+	call	HB_INVOKE
+	or	a
+	ret	z
+	bit	7,a
+	ret	nz
+	ld	a,0FFh
+	ret
+siain:	call	siaist
+	jr	z,siain
+	ld	c,0
+	jr	hbin
+sibin:	call	sibist
+	jr	z,sibin
+	ld	c,1
+hbin:	ld	b,BF_CIOIN
+	call	HB_INVOKE
+	ld	a,e
+	ret
+siaost:	ld	c,0
+	jr	hbost
+sibost:	ld	c,1
+hbost:	ld	b,BF_CIOOST
+	call	HB_INVOKE
+	or	a
+	ret	z
+	bit	7,a
+	ret	nz
+	ld	a,0FFh
+	ret
+siaout:	ld	a,c
+	ld	c,0
+	jr	hbunitout
+sibout:	ld	a,c
+	ld	c,1
+hbunitout:
+	ld	e,a
+	ld	b,BF_CIOOUT
+	jp	HB_INVOKE
+	else
 siaist:	ld	hl,SIOCA
 	jr	sist
 sibist:	ld	hl,SIOCB
@@ -735,21 +802,28 @@ sibout:	call	sibost
 	ld	a,c
 	ld	(SIODB),a
 	ret
+	endif
 
 ; Count the RAM into RAMK: 64K, plus 32K for each of B1 and B2 that
 ; holds a test pattern. Interrupts are off. In common memory, as it maps
 ; B1 and B2 low.
-ramtest: ld	b,64
+ramtest:
+	ifdef	ROMWBW
+	ld	a,128
+	ld	(RAMK),a
+	ret
+	else
+	ld	b,64
 	ld	a,BANK_TPA
 	call	rt1
 	ld	a,BANK_B2
 	call	rt1
 	ld	a,BANK_SYS
-	ld	(PIODA),a
+	BANKSET
 	ld	a,b
 	ld	(RAMK),a
 	ret
-rt1:	ld	(PIODA),a
+rt1:	BANKSET
 	ld	hl,0
 	ld	c,(hl)
 	ld	a,55h
@@ -765,6 +839,7 @@ rt1:	ld	(PIODA),a
 	ld	b,a
 rt2:	ld	(hl),c
 	ret
+	endif
 
 ; Functions 2 and 6 writing a character, the most called, done here
 ; without the kernel mapped in, as its f2 and f6 do them. A tab, which
@@ -869,7 +944,15 @@ bf_ret:	ld	sp,(usersp)
 ; the keys: kpoll does, on the BDOS's stack, or a program polling 6 or
 ; 11 never sees one. With them on, only the return on the program's
 ; stack, as an interrupt puts there anyway
-bfkp:	ld	a,i
+bfkp:
+	ifdef	ROMWBW
+	ld	(usersp),sp
+	ld	sp,(kstk)
+	call	kpoll
+	ld	sp,(usersp)
+	ret
+	else
+	ld	a,i
 	ret	pe
 	ld	a,i
 	ret	pe
@@ -878,6 +961,7 @@ bfkp:	ld	a,i
 	call	kpoll
 	ld	sp,(usersp)
 	ret
+	endif
 
 ; The interrupts while the kernel is mapped, set before it is. A
 ; program's own vector table or handler below 8000h would run the
@@ -918,7 +1002,7 @@ bdexit:	ld	a,(LIBIFF)		; back to the library: off
 	jr	z,bdx_1
 	di
 bdx_1:	ld	a,(UBANK)
-	ld	(PIODA),a
+	BANKSET
 	pop	af
 	ld	(UBANK),a
 	pop	iy
@@ -970,6 +1054,9 @@ krw_9:	pop	af
 ; the end of the screen, T to the end of the line, E insert a line, R
 ; delete one, ) and ( the second style on and off, 0 and 1 the cursor
 ; off and on, = row col, each + 20h. Bit 7 is dropped, as Lobo's does.
+	ifdef	ROMWBW
+	include	"../../port/console.inc"
+	else
 crtout:	push	af
 	push	bc
 	push	de
@@ -1793,6 +1880,7 @@ sastk:	push	hl
 	ret	nz
 	jp	sasto
 
+	endif
 COMMON_END:
 	ent
 COMMON_LEN	equ	COMMON_END-COMMON_ORG
@@ -1802,7 +1890,23 @@ COMMON_LEN	equ	COMMON_END-COMMON_ORG
 ; It runs in A2, where the boot sector loaded it after the common part,
 ; so it takes no common memory. kmain clears the kernel's variables
 ; over it once it is done with.
-cold:	di
+cold:
+	ifdef	ROMWBW
+	di
+	ld	sp,STKTOP
+	ld	hl,CVARS
+	ld	de,CVARS+1
+	ld	bc,255
+	ld	(hl),0
+	ldir
+	ld	(kstk),sp
+	ld	a,128
+	ld	(RAMK),a
+	ld	c,1Ah
+	call	crtout
+	jp	kmain
+	else
+	di
 	ld	sp,STKTOP
 	ld	hl,CVARS
 	ld	de,CVARS+1
@@ -1868,4 +1972,5 @@ siotab:	db	18h,18h,14h,48h,13h,0E1h,15h,0EAh,11h,0
 
 ; Lobo's CRTC table, 80 x 24
 crtctab: db	119,80,97,6,27,12,24,26,0,8,0,0,0,0,0,0
+	endif
 

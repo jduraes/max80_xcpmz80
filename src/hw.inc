@@ -34,6 +34,10 @@ PIOCB		equ	BLK+7FFh
 BEEP		equ	BLK+7F8h	; any write beeps
 DIPSW		equ	BLK+7F8h
 PIODA		equ	BLK+7FCh	; bank select, bits 7-4
+HB_CURBNK	equ	PIODA
+	macro	BANKSET
+	ld	(PIODA),a
+	endm
 MATRIX		equ	BLK+800h	; key rows at +1, +2, +4 ... +80h
 VIDLO		equ	BLK+0C00h	; video RAM 000h-3FFh
 VIDWIN		equ	BLK		; video RAM 400h-7FFh, window 2
