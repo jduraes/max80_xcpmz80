@@ -16,6 +16,12 @@ crtout:	push	af
 	jr	z,co_start
 	cp	20h
 	jr	c,co_ctl
+	ld	a,(CURCOL)
+	inc	a
+	cp	COLS
+	jr	c,co_pcol
+	xor	a
+co_pcol:ld	(CURCOL),a
 co_send:ld	a,c
 	call	hbout
 co_done:pop	hl
@@ -29,13 +35,13 @@ co_state:
 	ld	(ESCST),a
 	jp	co_done
 co_ctl:	cp	0Dh
-	jr	z,co_send
+	jr	z,co_cr
 	cp	0Ah
 	jr	z,co_send
 	cp	08h
-	jr	z,co_send
+	jr	z,co_bs
 	cp	09h
-	jr	z,co_send
+	jr	z,co_tab
 	cp	07h
 	jr	z,co_send
 	cp	0Bh
@@ -47,13 +53,37 @@ co_ctl:	cp	0Dh
 	cp	1Eh
 	jr	z,co_home
 	jp	co_done
+co_cr:	xor	a
+co_cset:ld	(CURCOL),a
+	jr	co_send
+co_bs:	ld	a,(CURCOL)
+	or	a
+	jr	z,co_send
+	dec	a
+	jr	co_cset
+co_tab:	ld	a,(CURCOL)
+	add	a,8
+	and	0F8h
+	cp	COLS
+	jr	c,co_cset
+	xor	a
+	jr	co_cset
 co_up:	ld	hl,ansi_up
 	jp	co_str
-co_right:ld	hl,ansi_right
+co_right:ld	a,(CURCOL)
+	inc	a
+	cp	COLS
+	jr	nc,co_done
+	ld	(CURCOL),a
+	ld	hl,ansi_right
 	jp	co_str
-co_home:ld	hl,ansi_home
+co_home:	xor	a
+	ld	(CURCOL),a
+	ld	hl,ansi_home
 	jp	co_str
-co_clear:ld	hl,ansi_clear
+co_clear:xor	a
+	ld	(CURCOL),a
+	ld	hl,ansi_clear
 co_str:	call	hbstr
 	jp	co_done
 
@@ -104,6 +134,7 @@ co_col:	xor	a
 	jp	c,co_done_pop
 	cp	COLS
 	jp	nc,co_done_pop
+	ld	(CURCOL),a
 	inc	a
 	push	af
 	ld	hl,ansi_pos

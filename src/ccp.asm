@@ -77,7 +77,10 @@ sh_len:	ld	a,(lnlen)
 	call	lbptr
 	ld	(hl),0
 
-sh_go:	call	crlf
+sh_go:
+	ifndef	ROMWBW
+	call	crlf
+	endif
 	; fall into docmd
 
 ; Run the command line in linebuf

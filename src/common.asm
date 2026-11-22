@@ -1055,7 +1055,7 @@ krw_9:	pop	af
 ; delete one, ) and ( the second style on and off, 0 and 1 the cursor
 ; off and on, = row col, each + 20h. Bit 7 is dropped, as Lobo's does.
 	ifdef	ROMWBW
-	include	"../../port/console.inc"
+	include	"../romwbw/port/console.inc"
 	else
 crtout:	push	af
 	push	bc

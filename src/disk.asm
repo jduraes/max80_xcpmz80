@@ -186,7 +186,7 @@ wrsec:	call	tbwr			; the track buffer must not keep it
 rw0:	ld	(rwflag),a
 	ifdef	ROMWBW
 	jp	hbrw
-	include	"../../port/disk_hbios.inc"
+	include	"../romwbw/port/disk_hbios.inc"
 	else
 	ld	a,(ix+D_TYPE)
 	dec	a			; DT_FLOPPY
