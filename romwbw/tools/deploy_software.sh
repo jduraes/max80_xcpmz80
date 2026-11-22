@@ -51,6 +51,20 @@ if [ ! -f "$SOFTWARE/ZORK1.DAT" ]; then
 		-o "$SOFTWARE/ZORK1.DAT"
 fi
 
+TP_ZIP=$SOFTWARE/TP_301A.ZIP
+if [ ! -f "$TP_ZIP" ]; then
+	curl -fsSL --retry 3 http://www.retroarchive.org/cpm/lang/TP_301A.ZIP -o "$TP_ZIP"
+fi
+if [ ! -f "$SOFTWARE/tp301a/TURBO.MSG" ]; then
+	python3 - "$TP_ZIP" "$SOFTWARE/tp301a" <<'PY'
+import sys
+import zipfile
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    archive.extractall(sys.argv[2])
+PY
+fi
+python3 tools/configure_turbo.py "$TP_ZIP" "$SOFTWARE/tp301a/TURBO.COM"
+
 make -j2 all
 make -C "$CPROGRAMS" -j2 all SDCC_BIN="$SDCC_BIN"
 
@@ -66,5 +80,10 @@ set -- \
 cd ..
 python3 tools/mkdisk.py build/xcpmz80.sys --hd 8 "$ROMWBW/build/xcpm.img" "$@" \
 	--in BBC "$BBC_ZIP" "$SOFTWARE/bbc/README.TXT" \
-	"$SOFTWARE/bbc/B/0/WHATSNEW.TXT" "$SOFTWARE"/bbc/B/0/*.BBC
+	"$SOFTWARE/bbc/B/0/WHATSNEW.TXT" "$SOFTWARE"/bbc/B/0/*.BBC \
+	--in PASCAL "$TP_ZIP" "$SOFTWARE/tp301a/TURBO.COM" \
+	"$SOFTWARE/tp301a/TURBO.MSG" "$SOFTWARE/tp301a/TURBO.OVR" \
+	"$SOFTWARE/tp301a/TINST.COM" "$SOFTWARE/tp301a/TINST.DTA" \
+	"$SOFTWARE/tp301a/TINST.MSG" "$SOFTWARE/tp301a/READ.ME" \
+	"$ROMWBW/software/TPTEST.PAS"
 python3 tools/fatcheck.py "$ROMWBW/build/xcpm.img"
