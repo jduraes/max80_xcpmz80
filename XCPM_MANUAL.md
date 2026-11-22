@@ -88,6 +88,12 @@ batch file.
 
 `B:` on its own makes B: the current drive.
 
+`SETDEF` shows the drive search path. The default is the current drive,
+then A:. `SETDEF A:,B:,C:,D:` sets a new order of up to four drives,
+and `*` means the current drive. Programs are sought in each drive's
+current folder and then its root folder. This is a drive search path,
+not a list of arbitrary folders.
+
 ## Drives and disks
 
 There are eight drive letters. The MAX-80 takes four floppy drives.

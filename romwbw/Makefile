@@ -47,9 +47,13 @@ build/CLOCK.COM: port/clock.asm
 	mkdir -p build
 	$(SJASM) --nologo --msg=war --raw=$@ $<
 
-build/xcpm.img: $(UPSTREAM)/build/xcpmz80.sys $(UPSTREAM)/build/MORE.COM $(UPSTREAM)/build/BENCH.COM build/CLOCK.COM
+build/SETDEF.COM: port/setdef.asm
+	mkdir -p build
+	$(SJASM) --nologo --msg=war --raw=$@ $<
+
+build/xcpm.img: $(UPSTREAM)/build/xcpmz80.sys $(UPSTREAM)/build/MORE.COM $(UPSTREAM)/build/BENCH.COM build/CLOCK.COM build/SETDEF.COM
 	cd $(UPSTREAM) && python3 tools/mkdisk.py build/xcpmz80.sys --hd 8 $(CURDIR)/$@ \
-		build/MORE.COM $(CURDIR)/build/CLOCK.COM build/BENCH.COM
+		build/MORE.COM $(CURDIR)/build/CLOCK.COM $(CURDIR)/build/SETDEF.COM build/BENCH.COM
 
 run: all
 	$(EMU) --no-config --romwbw=build/xcpm-emu.rom --romldr=build/xcpm-emu.rom \

@@ -25,7 +25,8 @@ def main():
     image = BUILD / "xcpm-test.img"
     subprocess.run([
         "python3", "tools/mkdisk.py", "build/xcpmz80.sys", "--hd", "8",
-        str(image), "build/MORE.COM", str(ROOT / "build/CLOCK.COM"), "build/BENCH.COM",
+        str(image), "build/MORE.COM", str(ROOT / "build/CLOCK.COM"),
+        str(ROOT / "build/SETDEF.COM"), "build/BENCH.COM",
         str(BUILD / "HELLO.TXT"), str(BUILD / "AUTOEXEC.BAT"),
     ], cwd=UPSTREAM, check=True, stdout=subprocess.DEVNULL)
     run = subprocess.run([
@@ -39,7 +40,7 @@ def main():
     assert run.returncode == 0, output
     expected = [
         "XCP/M-Z80 v0.2 for RomWBW on RC2014, 128K, 55K TPA",
-        "A: MORE     COM : CLOCK    COM : BENCH    COM",
+        "A: MORE     COM : CLOCK    COM : SETDEF   COM : BENCH    COM",
         "Hello from RomWBW XCPM.",
         "Second line.",
         "HELLO    TXT",

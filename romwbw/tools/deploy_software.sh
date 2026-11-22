@@ -69,7 +69,7 @@ make -j2 all
 make -C "$CPROGRAMS" -j2 all SDCC_BIN="$SDCC_BIN"
 
 set -- \
-	build/MORE.COM "$ROMWBW/build/CLOCK.COM" build/BENCH.COM \
+	build/MORE.COM "$ROMWBW/build/CLOCK.COM" "$ROMWBW/build/SETDEF.COM" build/BENCH.COM \
 	"$CPROGRAMS/build/CLIB.SYS" \
 	"$CPROGRAMS/build/ADVENT.COM" \
 	"$CPROGRAMS/build/ADVENT1.TXT" "$CPROGRAMS/build/ADVENT2.TXT" \
