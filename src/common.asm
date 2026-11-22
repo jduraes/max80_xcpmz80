@@ -36,6 +36,8 @@ CURHL		equ	CVARS+30h	; the cell curon last put the cursor on
 TICKS		equ	CVARS+32h	; counts the ticks, for the blink
 BDIFF		equ	CVARS+34h	; 1: the BDOS turned interrupts off
 BLINKO		equ	CVARS+33h	; nonzero: the blink has the cursor off
+KSTATE		equ	CVARS+35h	; terminal input escape-sequence state
+KPEND		equ	CVARS+36h	; literal after ESC, waiting for the ring
 RSXSTK		equ	CVARS+100h	; rsxcall's stack, from CVARS+80h
 RSXSTUB		equ	0040h		; in page zero: call 0005h, jp rsxret
 

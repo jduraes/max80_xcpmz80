@@ -226,7 +226,16 @@ kpoll:	push	af
 	push	bc
 	push	de
 	push	hl
-	ld	b,BF_CIOIST
+	ld	a,(KPEND)
+	or	a
+	jr	z,kp_host
+	ld	e,a
+	call	kp_room
+	jr	z,kp_done
+	xor	a
+	ld	(KPEND),a
+	jr	kp_store
+kp_host:ld	b,BF_CIOIST
 	ld	c,CIO_CONSOLE
 	call	HB_INVOKE
 	or	a
@@ -236,14 +245,13 @@ kpoll:	push	af
 	ld	b,BF_CIOIN
 	ld	c,CIO_CONSOLE
 	call	HB_INVOKE
-	ld	a,(KFILL)
-	inc	a
-	and	7Fh
-	ld	b,a
-	ld	a,(KTAKE)
-	cp	b
+	ld	a,e
+	call	kfilter
+	jr	c,kp_done
+	ld	e,a
+	call	kp_room
 	jr	z,kp_done
-	ld	a,(KFILL)
+kp_store:ld	a,(KFILL)
 	ld	l,a
 	ld	h,high KRING
 	ld	(hl),e
@@ -254,6 +262,65 @@ kp_done:pop	hl
 	pop	bc
 	pop	af
 	ret
+kp_room:ld	a,(KFILL)
+	inc	a
+	and	7Fh
+	ld	b,a
+	ld	a,(KTAKE)
+	cp	b
+	ret
+
+; Terminal arrows to the MAX-80's UP, DOWN, LEFT and RIGHT. A non-arrow
+; ESC is returned first and its following byte is left pending for the
+; next poll, so ESC remains a Meta prefix in the editors.
+kfilter:ld	b,a
+	ld	a,(KSTATE)
+	or	a
+	jr	z,kf_normal
+	dec	a
+	jr	z,kf_prefix
+	xor	a
+	ld	(KSTATE),a
+	ld	a,b
+	cp	'A'
+	jr	z,kf_up
+	cp	'B'
+	jr	z,kf_down
+	cp	'C'
+	jr	z,kf_right
+	cp	'D'
+	jr	z,kf_left
+	scf
+	ret
+kf_up:ld	a,1Ch
+	ret
+kf_down:ld	a,1Dh
+	ret
+kf_right:ld	a,1Fh
+	ret
+kf_left:ld	a,1Eh
+	ret
+kf_normal:ld	a,b
+	cp	1Bh
+	jr	nz,kf_literal
+	ld	a,1
+kf_seq:	ld	(KSTATE),a
+	scf
+	ret
+kf_prefix:ld	a,b
+	cp	'['
+	jr	z,kf_second
+	cp	'O'
+	jr	z,kf_second
+	xor	a
+	ld	(KSTATE),a
+	ld	a,b
+	ld	(KPEND),a
+	ld	a,1Bh
+kf_literal:or	a
+	ret
+kf_second:ld	a,2
+	jr	kf_seq
 kpeek:	push	hl
 	ld	a,(KTAKE)
 	ld	l,a
